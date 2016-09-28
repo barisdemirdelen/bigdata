@@ -1,15 +1,15 @@
 import pandas as pd
 import numpy as np
+from matplotlib.patches import Ellipse
 from scipy.constants import c
 from scipy.constants import pi
 from scipy.optimize import minimize
 from scipy.stats import chi2
 from matplotlib import pyplot as plt
 
-dataset = pd.read_csv("UvA-wifitracking-exercise-prepped-data.csv")
-# print(dataset)
 
 f = 2.4e9
+
 np.random.seed(100)
 
 
@@ -66,7 +66,7 @@ print("Mean is %.4f and std is %.4f" % (mean, std))
 
 Pt = np.zeros(1000)
 r = (25 * 25 + 2 * 2) ** 0.5
-Pr = Pr = Pt + 25 * np.log10(c / (4 * pi * f * r)) + np.random.normal(0, 1, 1000)
+Pr = Pt + 25 * np.log10(c / (4 * pi * f * r)) + np.random.normal(0, 1, 1000)
 
 normalized_residual = get_transmission_power(Pt, r) - Pr
 plt.clf()
@@ -215,10 +215,257 @@ plt.hist(Xs, normed=True)
 df = 2
 plt.plot(chi2.pdf(np.arange(16), df), 'r-', lw=5, alpha=0.6, label='chi2 pdf')
 plt.hist(Xs, normed=True)
-plt.show()
+# plt.show()
 
 # They didn't fit, our average is much higher
 
 # r
 #  We underestimated the uncertainty by a factor of 2
+
+# w
+S = []
+for router in routers:
+    Si = get_transmission_power_coords(Pt, router, device_position) + np.random.normal(0, 1)
+    S.append(Si)
+x0 = np.array([10.0, 10.0])
+# check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
+# print(check_grad_result)
+result = minimize(get_chi_squared, x0, method="L-BFGS-B", jac=False, options={'maxiter': 1000})
+(x, y) = result.x
+Xs = (get_chi_squared(result.x))
+print("Estimate (x,y): (%.2f,%.2f), chi squared: %.2f" % (x, y, Xs))
+
+x_variance = 0
+y_variance = 0
+for router in routers:
+    x_variance += (-20.0 * (x - router[0]) / (
+        np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+    y_variance += (-20.0 * (y - router[1]) / (
+        np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+
+print("Variance is (%.4f, %.4f)" % (x_variance, y_variance))
+print("Standard deviation is (%.4f, %.4f)" % (x_variance ** 0.5, y_variance ** 0.5))
+
+plt.clf()
+ax = plt.subplot()
+plt.scatter(device_position[0], device_position[1])
+plt.scatter(x, y)
+ell = Ellipse(xy=(x, y),
+              width=x_variance ** 0.5, height=y_variance ** 0.5,
+              angle=0, color='red')
+ell.set_facecolor('none')
+ax.add_artist(ell)
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 10)
+# plt.show()
+
+# x
+
+# S = []
+# for router in routers:
+#     Si = get_transmission_power_coords(Pt, router, device_position) + np.random.normal(0, 1)
+#     S.append(Si)
+# x0 = np.array([10.0, 10.0])
+# # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
+# # print(check_grad_result)
+# result = minimize(get_chi_squared, x0, method="L-BFGS-B", jac=False, options={'maxiter': 1000})
+# (x, y) = result.x
+# Xs = (get_chi_squared(result.x))
+# print("Estimate (x,y): (%.2f,%.2f), chi squared: %.2f" % (x, y, Xs))
+#
+# x_variance = 0
+# y_variance = 0
+# for router in routers:
+#     x_variance += (-20.0 * (x - router[0]) / (
+#         np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+#     y_variance += (-20.0 * (y - router[1]) / (
+#         np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+#
+# print("Variance is (%.4f, %.4f)" % (x_variance, y_variance))
+# print("Standard deviation is (%.4f, %.4f)" % (x_variance ** 0.5, y_variance ** 0.5))
+#
+# plt.clf()
+# ax = plt.subplot()
+# plt.scatter(device_position[0], device_position[1])
+# plt.scatter(x, y)
+# ell = Ellipse(xy=(x, y),
+#               width=x_variance ** 0.5, height=y_variance ** 0.5,
+#               angle=0, color='red')
+# ell.set_facecolor('none')
+# ax.add_artist(ell)
+# ax.set_xlim(0, 10)
+# ax.set_ylim(0, 10)
+# # plt.show()
+#
+# S = []
+# for router in routers:
+#     Si = get_transmission_power_coords(Pt, router, device_position) + np.random.normal(0, 1)
+#     S.append(Si)
+# x0 = np.array([10.0, 10.0])
+# # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
+# # print(check_grad_result)
+# result = minimize(get_chi_squared, x0, method="L-BFGS-B", jac=False, options={'maxiter': 1000})
+# (x, y) = result.x
+# Xs = (get_chi_squared(result.x))
+# print("Estimate (x,y): (%.2f,%.2f), chi squared: %.2f" % (x, y, Xs))
+#
+# x_variance = 0
+# y_variance = 0
+# for router in routers:
+#     x_variance += (-20.0 * (x - router[0]) / (
+#         np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+#     y_variance += (-20.0 * (y - router[1]) / (
+#         np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+#
+# print("Variance is (%.4f, %.4f)" % (x_variance, y_variance))
+# print("Standard deviation is (%.4f, %.4f)" % (x_variance ** 0.5, y_variance ** 0.5))
+#
+# plt.clf()
+# ax = plt.subplot()
+# plt.scatter(device_position[0], device_position[1])
+# plt.scatter(x, y)
+# ell = Ellipse(xy=(x, y),
+#               width=x_variance ** 0.5, height=y_variance ** 0.5,
+#               angle=0, color='red')
+# ell.set_facecolor('none')
+# ax.add_artist(ell)
+# ax.set_xlim(0, 10)
+# ax.set_ylim(0, 10)
+# plt.show()
+
+# y
+
+positions = []
+Xs = []
+variances = []
+normalized_residuals = []
+for i in range(1000):
+    S = []
+    for router in routers:
+        Si = get_transmission_power_coords(Pt, router, device_position) + np.random.normal(0, 1)
+        S.append(Si)
+    x0 = np.array([10.0, 10.0])
+    # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
+    # print(check_grad_result)
+    result = minimize(get_chi_squared, x0, method="L-BFGS-B", jac=False, options={'maxiter': 1000})
+    (x, y) = result.x
+    positions.append(result.x)
+    Xs.append(get_chi_squared(result.x))
+    # print("Estimate (x,y): (%.2f,%.2f), chi squared: %.2f" % (x, y, Xs))
+
+    x_variance = 0
+    y_variance = 0
+    for router in routers:
+        x_variance += (-20.0 * (x - router[0]) / (
+            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+        y_variance += (-20.0 * (y - router[1]) / (
+            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+
+    variances.append((x_variance, y_variance))
+
+    normalized_residual = 0
+    for i, router in enumerate(routers):
+        normalized_residual += S[i] - get_transmission_power_coords(Pt, router, (x, y, device_position[2]))
+    normalized_residual /= len(routers)
+    normalized_residuals.append(normalized_residual)
+
+positions = np.array(positions)
+Xs = np.array(Xs)
+variances = np.array(variances)
+normalized_residuals = np.array(normalized_residuals)
+
+mean_pos = positions.mean(axis=0)
+mean_variance = variances.mean(axis=0)
+mean_chi_square = Xs.mean()
+print("Mean of (x,y): (%.2f,%.2f), mean of chi squared: %.2f, mean of standard deviations: (%.2f, %.2f)" % (
+    mean_pos[0], mean_pos[1], mean_chi_square, mean_variance[0] ** 0.5, mean_variance[1] ** 0.5))
+
+plt.clf()
+ax = plt.subplot()
+plt.scatter(device_position[0], device_position[1])
+plt.scatter(mean_pos[0], mean_pos[1])
+ell = Ellipse(xy=(mean_pos[0], mean_pos[1]),
+              width=mean_variance[0] ** 0.5, height=mean_variance[1] ** 0.5,
+              angle=0, color='red')
+ell.set_facecolor('none')
+ax.add_artist(ell)
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 10)
+plt.show()
+
+plt.clf()
+plt.hist(normalized_residuals)
+plt.show()
+print("Mean of normalized residuals: %.4f, standard deviation: %.4f" % (
+np.mean(normalized_residuals), np.std(normalized_residuals)))
+
+# since we use multiple routers, calculating the bla bla giver lower std.
+
+# z
+
+positions = []
+Xs = []
+variances = []
+normalized_residuals = []
+for i in range(1000):
+    S = []
+    for router in routers:
+        Si = get_transmission_power_coords(Pt, router, device_position) + np.random.normal(0, 1)
+        S.append(Si)
+    x0 = np.array([10.0, 10.0])
+    # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
+    # print(check_grad_result)
+    result = minimize(get_chi_squared, x0, method="L-BFGS-B", jac=False, options={'maxiter': 1000})
+    (x, y) = result.x
+    positions.append(result.x)
+    Xs.append(get_chi_squared(result.x))
+    # print("Estimate (x,y): (%.2f,%.2f), chi squared: %.2f" % (x, y, Xs))
+
+    x_variance = 0
+    y_variance = 0
+    for router in routers:
+        x_variance += (-20.0 * (x - router[0]) / (
+            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+        y_variance += (-20.0 * (y - router[1]) / (
+            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_position[2] - router[2]) ** 2))) ** 2
+
+    variances.append((x_variance, y_variance))
+
+    normalized_residual = 0
+    for i, router in enumerate(routers):
+        normalized_residual += S[i] - get_transmission_power_coords(Pt, router, (x, y, device_position[2]))
+    normalized_residual /= len(routers)
+    normalized_residuals.append(normalized_residual)
+
+positions = np.array(positions)
+Xs = np.array(Xs)
+variances = np.array(variances)
+normalized_residuals = np.array(normalized_residuals) * 2
+
+mean_pos = positions.mean(axis=0)
+mean_variance = variances.mean(axis=0)
+mean_chi_square = Xs.mean()
+print("Mean of (x,y): (%.2f,%.2f), mean of chi squared: %.2f, mean of standard deviations: (%.2f, %.2f)" % (
+    mean_pos[0], mean_pos[1], mean_chi_square, mean_variance[0] ** 0.5, mean_variance[1] ** 0.5))
+
+plt.clf()
+ax = plt.subplot()
+plt.scatter(device_position[0], device_position[1])
+plt.scatter(mean_pos[0], mean_pos[1])
+ell = Ellipse(xy=(mean_pos[0], mean_pos[1]),
+              width=mean_variance[0] ** 0.5, height=mean_variance[1] ** 0.5,
+              angle=0, color='red')
+ell.set_facecolor('none')
+ax.add_artist(ell)
+ax.set_xlim(0, 10)
+ax.set_ylim(0, 10)
+plt.show()
+
+plt.clf()
+plt.hist(normalized_residuals)
+plt.show()
+print("Mean of normalized residuals: %.4f, standard deviation: %.4f" % (
+    np.mean(normalized_residuals), np.std(normalized_residuals)))
+
+# ok
 
