@@ -79,22 +79,28 @@ def get_chi_squared(inputs, S, sigma):
     return total
 
 
+show_weights_plot = True
+
+
 def get_chi_squared_in_timeframe(inputs, all_received, current_time, sigma):
+    global show_weights_plot
+
     time_list = sorted(list(all_received.keys()))
     weights = norm.pdf(time_list, current_time, time_std)
     weights /= sum(weights)
 
-    # if current_time == 1423136679513:
-    #     plt.clf()
-    #     plt.plot(np.array(time_list) - 1423136679513, weights)
-    #     plt.show()
+    if current_time == 1423136679513 and show_weights_plot:
+        plt.clf()
+        plt.plot(np.array(time_list) - 1423136679513, weights)
+        plt.show()
+        show_weights_plot = False
+
 
     chi_squared = 0
     for i, time in enumerate(time_list):
         chi_squared += weights[i] * get_chi_squared(inputs, all_received[time], sigma)
 
     return chi_squared
-
 
 # for packets in packet_groups:
 results = []
@@ -109,8 +115,6 @@ for i, time in enumerate(time_list):
     S = {}
     num_routers.append(len(packets))
     for packet in packets:
-        # router_position = routers[packet["droneId"]]
-        # Pr = packet["signal"]
         S[packet["droneId"]] = packet["signal"]
     all_received[time] = S
 
@@ -118,14 +122,9 @@ for i, time in enumerate(time_list):
     x0 = np.array([-20.0, 5.0, 5.0])
 
     sigma = 7.0
-    # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
-    # print(check_grad_result)
-    result = minimize(get_chi_squared_in_timeframe, x0, args=(all_received, time, sigma), method="L-BFGS-B", jac=False, options={'maxiter': 100000})
-    # print(result)
+    result = minimize(get_chi_squared_in_timeframe, x0, args=(all_received, time, sigma), method="L-BFGS-B", jac=False,
+                      options={'maxiter': 100000})
     current_chi2 = result.fun
-
-    # if abs(result.x[1]) > 100 or abs(result.x[2]) > 100 or result.x[0] > 1:
-    #     continue
 
     Pt, x, y = result.x[0], result.x[1], result.x[2]
     x_variance = 0
@@ -151,8 +150,6 @@ for i, time in enumerate(time_list):
     normalized_residuals.append(normalized_residual)
 
     chi2s.append(current_chi2)
-    # if abs(result.x[1]) > 100:
-    #     print("hi dude" + str(i))
     results.append(result.x)
 
 chi2s = np.array(chi2s)
