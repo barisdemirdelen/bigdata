@@ -7,6 +7,7 @@ from scipy.constants import c
 from scipy.constants import pi
 from scipy.optimize import minimize
 from scipy.stats import chi2
+from scipy.stats import norm
 
 # 6
 f = 2.4e9
@@ -33,7 +34,7 @@ def get_transmission_power_coords(Pt, router_pos, wifi_pos):
 
 dataset = pd.read_csv("UvA-wifitracking-exercise-prepped-data.csv")
 dataset = pd.DataFrame.sort_values(dataset, "measurementTimestamp")
-print(dataset["measurementTimestamp"])
+# print(dataset["measurementTimestamp"])
 plt.clf()
 plt.scatter(dataset["measurementTimestamp"], dataset["seqNr"])
 # plt.show()
@@ -61,7 +62,6 @@ for packet_time in packet_groups.keys():
         new_packet_groups[packet_time] = packet_groups[packet_time]
 packet_groups = new_packet_groups
 
-
 # print(time_groups)
 print(len(packet_groups))
 print("hello")
@@ -78,27 +78,50 @@ def get_chi_squared(inputs, S, sigma):
     return total
 
 
+def get_chi_squared_in_timeframe(inputs, all_received, current_time, sigma):
+    time_list = sorted(list(all_received.keys()))
+    weights = norm.pdf(time_list, current_time, 10000)
+    weights /= sum(weights)
+
+    # if current_time == 1423136679513:
+    #     plt.clf()
+    #     plt.plot(np.array(time_list) - 1423136679513, weights)
+    #     plt.show()
+
+    chi_squared = 0
+    for i, time in enumerate(time_list):
+        chi_squared += weights[i] * get_chi_squared(inputs, all_received[time], sigma)
+
+    return chi_squared
+
+
 # for packets in packet_groups:
 results = []
 chi2s = []
 num_routers = []
 variances = []
 normalized_residuals = []
-for i, packets in enumerate(list(packet_groups.values())):
+all_received = {}
+time_list = np.array(sorted(list(packet_groups.keys())))
+for i, time in enumerate(time_list):
+    packets = packet_groups[time]
     S = {}
-    sigma = 5.2
     num_routers.append(len(packets))
     for packet in packets:
         # router_position = routers[packet["droneId"]]
         # Pr = packet["signal"]
         S[packet["droneId"]] = packet["signal"]
+    all_received[time] = S
 
+for i, time in enumerate(time_list):
     x0 = np.array([-20.0, 5.0, 5.0])
+
+    sigma = 7.0
     # check_grad_result = check_grad(get_chi_squared, get_chi_squared_grad, x0)
     # print(check_grad_result)
-    result = minimize(get_chi_squared, x0, args=(S, sigma), method="L-BFGS-B", jac=False, options={'maxiter': 100000})
+    result = minimize(get_chi_squared_in_timeframe, x0, args=(all_received, time, sigma), method="L-BFGS-B", jac=False, options={'maxiter': 100000})
     # print(result)
-    current_chi2 = get_chi_squared(result.x, S, sigma)
+    current_chi2 = result.fun
 
     # if abs(result.x[1]) > 100 or abs(result.x[2]) > 100 or result.x[0] > 1:
     #     continue
@@ -153,7 +176,7 @@ plt.scatter(router_positions[:, 0], router_positions[:, 1], color="r")
 
 plt.clf()
 plt.hist(chi2s, normed=True)
-df = np.ceil(mean_routers - 4)
+df = np.ceil(mean_routers - 3)
 plt.plot(chi2.pdf(np.arange(16), df), 'r-', lw=5, alpha=0.6, label='chi2 pdf')
 plt.hist(chi2s, normed=True)
 plt.show()
@@ -166,7 +189,7 @@ plt.clf()
 ax = plt.subplot()
 
 cm = plt.cm.get_cmap('Greens')
-plt.scatter(results[:, 1], results[:, 2], c=np.arange(len(results)), cmap=cm)
+plt.scatter(results[:, 1], results[:, 2], c=time_list, cmap=cm)
 plt.scatter(mean_pos[0], mean_pos[1], color="y")
 plt.scatter(router_positions[:, 0], router_positions[:, 1], color="r")
 for i in range(len(results)):
