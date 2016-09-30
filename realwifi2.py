@@ -13,6 +13,7 @@ from scipy.stats import norm
 f = 2.4e9
 min_router_count = 4
 np.random.seed(100)
+time_std = 10000
 
 routers = {"Lima": (5.82, 5.48, 3.0), "Mike": (11.33, 9.43, 3.0), "Kilo": (12.39, 6.77, 3.0),
            "Oscar": (2.48, 7.36, 3.0), "Alpha": (8.53, 2.16, 3.0), "India": (5.82, 5.48, 3.0),
@@ -80,7 +81,7 @@ def get_chi_squared(inputs, S, sigma):
 
 def get_chi_squared_in_timeframe(inputs, all_received, current_time, sigma):
     time_list = sorted(list(all_received.keys()))
-    weights = norm.pdf(time_list, current_time, 10000)
+    weights = norm.pdf(time_list, current_time, time_std)
     weights /= sum(weights)
 
     # if current_time == 1423136679513:
@@ -130,7 +131,7 @@ for i, time in enumerate(time_list):
     x_variance = 0
     y_variance = 0
     time_list = sorted(list(all_received.keys()))
-    weights = norm.pdf(time_list, time, 10000)
+    weights = norm.pdf(time_list, time, time_std)
     weights /= sum(weights)
     for j, time in enumerate(time_list):
         for router_name in all_received[time]:
