@@ -129,12 +129,16 @@ for i, time in enumerate(time_list):
     Pt, x, y = result.x[0], result.x[1], result.x[2]
     x_variance = 0
     y_variance = 0
-    for router_name in S:
-        router = routers[router_name]
-        x_variance += (-20.0 * (x - router[0]) / (
-            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_height - router[2]) ** 2))) ** 2
-        y_variance += (-20.0 * (y - router[1]) / (
-            np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_height - router[2]) ** 2))) ** 2
+    time_list = sorted(list(all_received.keys()))
+    weights = norm.pdf(time_list, time, 10000)
+    weights /= sum(weights)
+    for j, time in enumerate(time_list):
+        for router_name in all_received[time]:
+            router = routers[router_name]
+            x_variance += weights[j] * (-20.0 * (x - router[0]) / (
+                np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_height - router[2]) ** 2))) ** 2
+            y_variance += weights[j] * (-20.0 * (y - router[1]) / (
+                np.log(10) * ((x - router[0]) ** 2 + (y - router[1]) ** 2 + (device_height - router[2]) ** 2))) ** 2
 
     variances.append((x_variance, y_variance))
 
